@@ -1,19 +1,44 @@
-const path = require('path');
-const fs = require('fs-extra');
-const solc = require('solc');
+const path = require("path");
+const solc = require("solc");
+const fs = require("fs-extra");
 
-const buildPath = path.resolve(__dirname, 'build');
-fs.removeSync(buildPath); 
+const compiledContractPath = path.resolve(__dirname, "compiledContracts");
+const contractFileName = "Campaign.sol";
 
-const campaignPath = path.resolve(__dirname, 'contracts','Campaign.sol');
-const source = fs.readFileSync(campaignPath,'utf8');
-const output = solc.compile(source , 1).contracts;
+// if compiledContracts folder already exists, it is deleted
+fs.removeSync(compiledContractPath);
 
-fs.ensureDirSync(buildPath);
+const campaignPath = path.resolve(__dirname, "contracts", contractFileName);
+const source = fs.readFileSync(campaignPath, "utf8");
+const input = {
+  language: "Solidity",
+  sources: {},
+  settings: {
+    metadata: {
+      useLiteralContent: true
+    },
+    outputSelection: {
+      "*": {
+        "*": ["*"]
+      }
+    }
+  }
+};
 
-for ( let contract in output){
-  fs.outputJsonSync(
-    path.resolve(buildPath, contract.replace(':','')+'.json'),
-    output[contract]
-  );
+input.sources[contractFileName] = {
+  content: source
+};
+
+const output = JSON.parse(solc.compile(JSON.stringify(input)));
+const contracts = output.contracts[contractFileName];
+
+// Create "compiled Contracts" folder.
+fs.ensureDirSync(compiledContractPath);
+
+// Extract and write the JSON representations of the contracts to the build folder.
+for (let contract in contracts) {
+  if (contracts.hasOwnProperty(contract)) {
+    const element = contracts[contract];
+    fs.outputJsonSync(path.resolve(compiledContractPath, `${contract}.json`), contracts[contract]);
+  }
 }
